@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚌 AMCO - Optimización de Rutas de Buses | Pereira & Dosquebradas</title>
+    
+    <!-- Leaflet CSS para mapas -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            gap: 0;
+        }
+
+        /* MAPA */
+        #mapa {
+            flex: 1;
+            background: #f0f0f0;
+            position: relative;
+            border-radius: 10px 0 0 0;
+        }
+
+        /* PANEL CONTROL */
+        .panel-control {
+            width: 380px;
+            background: white;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* EVENTOS */
+        .eventos-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn-evento {
+            padding: 10px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .btn-evento:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .btn-evento.activo {
+            border-color: #ff6b6b;
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-evento.accidente {
+            border-color: #ff6b6b;
+        }
+
+        .btn-evento.lluvia {
+            border-color: #4ecdc4;
+        }
+
+        .btn-evento.protesta {
+            border-color: #f7dc6f;
+        }
+
+        .btn-evento.construccion {
+            border-color: #f39c12;
+        }
+
+        /* ESTADÍSTICAS */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            border-top: 3px solid #667eea;
+        }
+
+        .stat-valor {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        /* RUTAS */
+        .rutas-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .ruta-item {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ruta-item:hover {
+            background: #f0f0f0;
+            transform: translateX(5px);
+        }
+
+        .ruta-nombre {
+            font-weight: bold;
+            font-size: 12px;
+            color: #333;
+        }
+
+        .ruta-info {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        /* BOTONES PRINCIPALES */
+        .btn-principal {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+        }
+
+        .btn-iniciar {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-iniciar:hover {
+            background: #5568d3;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-limpiar {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-limpiar:hover {
+            background: #c0392b;
+        }
+
+        .btn-optimizar {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-optimizar:hover {
+            background: #229954;
+        }
+
+        /* LEYENDA MAPA */
+        .leyenda {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .leyenda-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .leyenda-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+
+        /* INFORMACIÓN EVENTOS */
+        .evento-info {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .evento-info.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* SCROLL */
+        .panel-control::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .panel-control::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .panel-control::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+
+        .panel-control::-webkit-scrollbar-thumb:hover {
+            background: #5568d3;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .panel-control {
+                width: 100%;
+                height: 40vh;
+            }
+            
+            #mapa {
+                height: 60vh;
+            }
+        }
+
+        .contador-tiempo {
+            font-size: 11px;
+            color: #667eea;
+            font-weight: bold;
+            margin-top: 10px;
+            padding: 10px;
+            background: #ecf0f1;
+            border-radius: 4px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- MAPA -->
+        <div id="mapa"></div>
+        
+        <!-- PANEL CONTROL -->
+        <div class="panel-control">
+            <!-- HEADER -->
+            <div class="header">
+                <h1>🚌 AMCO</h1>
+                <p>Optimización de Rutas de Buses</p>
+                <small>Pereira & Dosquebradas</small>
+            </div>
+
+            <!-- LEYENDA -->
+            <div class="leyenda">
+                <strong>📍 LEYENDA DEL MAPA:</strong>
+                <div class="leyenda-item">
+                    <div class="leyenda-color" style="background: #ff6b6b;"></div>
+                    <span>Bus (ocupación alta)</span>
+                </div>
+                <div class="leyenda-item">
+                    <div class="leyenda-color" style="background: #ffd93d;"></div>
+                    <span>Bus (ocupación media)</span>
+                </div>
+                <div class="leyenda-item">
+                    <div class="leyenda-color" style="background: #6bcf7f;"></div>
+                    <span>Bus (ocupación baja)</span>
+                </div>
+                <div class="leyenda-item">
+                    <div class="leyenda-color" style="background: #667eea;"></div>
+                    <span>Parada de bus</span>
+                </div>
+            </div>
+
+            <!-- INFO EVENTOS -->
+            <div class="evento-info" id="eventoInfo"></div>
+
+            <!-- SECCIÓN EVENTOS -->
+            <div class="section">
+                <div class="section-title">
+                    <i class="fas fa-exclamation-triangle"></i> CREAR EVENTO
+                </div>
+                <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Haz click en una parada del mapa, luego selecciona un evento:</p>
+                <div class="eventos-grid">
+                    <button class="btn-evento accidente" onclick="crearEvento('accidente')">
+                        🚗💥 Accidente
+                    </button>
+                    <button class="btn-evento lluvia" onclick="crearEvento('lluvia')">
+                        🌧️ Lluvia
+                    </button>
+                    <button class="btn-evento protesta" onclick="crearEvento('protesta')">
+                        🚧 Protesta
+                    </button>
+                    <button class="btn-evento construccion" onclick="crearEvento('construccion')">
+                        🏗️ Construcción
+                    </button>
+                </div>
+                <button class="btn-principal btn-limpiar" onclick="limpiarEventos()">
+                    ✅ Limpiar Eventos
+                </button>
+            </div>
+
+            <!-- SECCIÓN ESTADÍSTICAS -->
+            <div class="section">
+                <div class="section-title">
+                    <i class="fas fa-chart-bar"></i> ESTADÍSTICAS
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-valor" id="totalBuses">0</div>
+                        <div class="stat-label">Buses Activos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-valor" id="totalPasajeros">0</div>
+                        <div class="stat-label">Pasajeros</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-valor" id="congestion">0%</div>
+                        <div class="stat-label">Congestión</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-valor" id="totalEventos">0</div>
+                        <div class="stat-label">Eventos Activos</div>
+                    </div>
+                </div>
+                <div class="contador-tiempo">
+                    ⏱️ Tiempo: <span id="tiempoTranscurrido">0s</span>
+                </div>
+            </div>
+
+            <!-- SECCIÓN RUTAS -->
+            <div class="section">
+                <div class="section-title">
+                    <i class="fas fa-route"></i> RUTAS ACTIVAS
+                </div>
+                <div class="rutas-list" id="rutasList"></div>
+            </div>
+
+            <!-- BOTONES PRINCIPALES -->
+            <button class="btn-principal btn-iniciar" onclick="toggleSimulacion()">
+                ▶️ Iniciar Simulación
+            </button>
+            <button class="btn-principal btn-optimizar" onclick="mostrarAlgebraLineal()">
+                📊 Ver Álgebra Lineal
+            </button>
+        </div>
+    </div>
+
+    <!-- Leaflet -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    
+    <script>
+        // ============================================
+        // VARIABLES GLOBALES
+        // ============================================
+        let mapa = null;
+        let buses = [];
+        let paradas = [];
+        let eventos = [];
+        let paradaSeleccionada = null;
+        let simulacionActiva = false;
+        let tiempoTranscurrido = 0;
+        let markers = {};
+        let layerBuses = null;
+
+        // ============================================
+        // INICIALIZACIÓN DEL MAPA
+        // ============================================
+        function inicializarMapa() {
+            // Coordenadas centrales de Pereira
+            const centro = [4.8135, -75.6942];
+            
+            mapa = L.map('mapa').setView(centro, 13);
+            
+            // Capas base
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(mapa);
+            
+            // Crear grupo para buses
+            layerBuses = L.layerGroup().addTo(mapa);
+            
+            // Crear paradas
+            crearParadas();
+            
+            console.log('✅ Mapa inicializado');
+        }
+
+        // ============================================
+        // CREAR PARADAS (COORDENADAS REALES)
+        // ============================================
+        function crearParadas() {
+            paradas = [
+                { id: 1, nombre: "Centro Cívico", lat: 4.8135, lon: -75.6942, ciudad: "Pereira" },
+                { id: 2, nombre: "Parque Arvi", lat: 4.8250, lon: -75.7100, ciudad: "Pereira" },
+                { id: 3, nombre: "Centro Comercial", lat: 4.8050, lon: -75.6850, ciudad: "Pereira" },
+                { id: 4, nombre: "Terminal Autobuses", lat: 4.8100, lon: -75.7000, ciudad: "Pereira" },
+                { id: 5, nombre: "Centro Dosquebradas", lat: 4.8000, lon: -75.7200, ciudad: "Dosquebradas" },
+                { id: 6, nombre: "Sector Galicia", lat: 4.7900, lon: -75.7150, ciudad: "Dosquebradas" }
+            ];
+
+            paradas.forEach(parada => {
+                const marker = L.circleMarker([parada.lat, parada.lon], {
+                    radius: 10,
+                    fillColor: '#667eea',
+                    color: '#333',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(mapa);
+
+                marker.bindPopup(`
+                    <strong>${parada.nombre}</strong><br>
+                    ${parada.ciudad}<br>
+                    <small>ID: ${parada.id}</small>
+                `);
+
+                // Click en parada
+                marker.on('click', () => {
+                    paradaSeleccionada = parada;
+                    console.log(`✅ Parada seleccionada: ${parada.nombre}`);
+                    mostrarMensaje(`Parada seleccionada: ${parada.nombre}`);
+                });
+
+                markers[parada.id] = marker;
+            });
+        }
+
+        // ============================================
+        // CREAR BUSES CON RUTAS
+        // ============================================
+        function crearBuses() {
+            buses = [
+                {
+                    id: 1,
+                    nombre: "Bus-001",
+                    ruta: [1, 4, 3, 1],
+                    progreso: 0,
+                    pasajeros: 20,
+                    velocidad: 1.0,
+                    marker: null,
+                    circleMarker: null
+                },
+                {
+                    id: 2,
+                    nombre: "Bus-002",
+                    ruta: [1, 5, 6, 1],
+                    progreso: 0.3,
+                    pasajeros: 35,
+                    velocidad: 1.2,
+                    marker: null,
+                    circleMarker: null
+                },
+                {
+                    id: 3,
+                    nombre: "Bus-003",
+                    ruta: [2, 1, 4, 2],
+                    progreso: 0.6,
+                    pasajeros: 15,
+                    velocidad: 0.8,
+                    marker: null,
+                    circleMarker: null
+                }
+            ];
+
+            // Convertir IDs de paradas a objetos parada
+            buses.forEach(bus => {
+                bus.ruta = bus.ruta.map(id => paradas.find(p => p.id === id));
+            });
+
+            console.log('✅ Buses creados');
+        }
+
+        // ============================================
+        // ÁLGEBRA LINEAL - DISTANCIA EUCLIDIANA
+        // ============================================
+        function distanciaEuclidiana(p1, p2) {
+            // Fórmula: ||v|| = sqrt((lat2-lat1)^2 + (lon2-lon1)^2) * 111 km
+            const dlat = p2.lat - p1.lat;
+            const dlon = p2.lon - p1.lon;
+            const distancia = Math.sqrt(dlat * dlat + dlon * dlon) * 111;
+            return distancia;
+        }
+
+        // ============================================
+        // INTERPOLACIÓN LINEAL (MOVIMIENTO SUAVE)
+        // ============================================
+        function interpolar(p1, p2, t) {
+            // Fórmula: P(t) = P1 + t*(P2 - P1) donde t ∈ [0,1]
+            t = Math.max(0, Math.min(1, t));
+            return {
+                lat: p1.lat + t * (p2.lat - p1.lat),
+                lon: p1.lon + t * (p2.lon - p1.lon)
+            };
+        }
+
+        // ============================================
+        // OBTENER POSICIÓN DEL BUS
+        // ============================================
+        function obtenerPosicionBus(bus) {
+            if (bus.ruta.length < 2) return bus.ruta[0];
+
+            // Calcular distancia total de la ruta
+            let distanciaTotal = 0;
+            for (let i = 0; i < bus.ruta.length - 1; i++) {
+                distanciaTotal += distanciaEuclidiana(bus.ruta[i], bus.ruta[i + 1]);
+            }
+
+            // Distancia objetivo según progreso
+            let distanciaObjetivo = bus.progreso * distanciaTotal;
+            let distanciaAcumulada = 0;
+
+            // Buscar segmento donde está el bus
+            for (let i = 0; i < bus.ruta.length - 1; i++) {
+                const distanciaSegmento = distanciaEuclidiana(bus.ruta[i], bus.ruta[i + 1]);
+
+                if (distanciaAcumulada + distanciaSegmento >= distanciaObjetivo) {
+                    // Calcular t en el segmento
+                    let t = 0;
+                    if (distanciaSegmento > 0) {
+                        t = (distanciaObjetivo - distanciaAcumulada) / distanciaSegmento;
+                    }
+
+                    return interpolar(bus.ruta[i], bus.ruta[i + 1], t);
+                }
+
+                distanciaAcumulada += distanciaSegmento;
+            }
+
+            return bus.ruta[bus.ruta.length - 1];
+        }
+
+        // ============================================
+        // APLICAR EVENTOS A LA VELOCIDAD DEL BUS
+        // ============================================
+        function calcularVelocidadAjustada(bus) {
+            let velocidadAjustada = bus.velocidad;
+            
+            // Buscar eventos que afecten la ruta del bus
+            const posicion = obtenerPosicionBus(bus);
+            
+            eventos.forEach(evento => {
+                if (!evento.activo) return;
+                
+                const paradaEvento = paradas.find(p => p.id === evento.parada);
+                const distancia = distanciaEuclidiana(posicion, paradaEvento);
+                
+                // Si el bus está cerca del evento (0.01 grados ≈ 1.1 km)
+                if (distancia < 0.01) {
+                    const multiplicador = evento.severidad * 3; // Hasta 3x más lento
+                    velocidadAjustada *= (1 - multiplicador);
+                    velocidadAjustada = Math.max(0.1, velocidadAjustada); // Mínimo 0.1x
+                }
+            });
+            
+            return velocidadAjustada;
+        }
+
+        // ============================================
+        // ACTUALIZAR BUSES
+        // ============================================
+        function actualizarBuses() {
+            buses.forEach(bus => {
+                // Ajustar velocidad por eventos
+                const velAjustada = calcularVelocidadAjustada(bus);
+                
+                // Avanzar progreso
+                bus.progreso += 0.01 * velAjustada;
+                
+                // Si completa la ruta, reiniciar
+                if (bus.progreso >= 1.0) {
+                    bus.progreso = 0.0;
+                }
+                
+                // Cambiar pasajeros (lógica simple)
+                const cambio = Math.floor(Math.random() * 3) - 1;
+                bus.pasajeros += cambio;
+                bus.pasajeros = Math.max(5, Math.min(55, bus.pasajeros));
+            });
+        }
+
+        // ============================================
+        // DIBUJAR BUSES EN EL MAPA
+        // ============================================
+        function dibujarBuses() {
+            layerBuses.clearLayers();
+
+            buses.forEach(bus => {
+                const posicion = obtenerPosicionBus(bus);
+                const ocupacion = (bus.pasajeros / 55) * 100;
+
+                // Determinar color según ocupación
+                let color;
+                if (ocupacion < 30) {
+                    color = '#6bcf7f'; // Verde
+                } else if (ocupacion < 50) {
+                    color = '#ffd93d'; // Amarillo
+                } else {
+                    color = '#ff6b6b'; // Rojo
+                }
+
+                // Dibujar círculo del bus
+                const circleMarker = L.circleMarker([posicion.lat, posicion.lon], {
+                    radius: 12,
+                    fillColor: color,
+                    color: '#333',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).addTo(layerBuses);
+
+                // Popup del bus
+                circleMarker.bindPopup(`
+                    <strong>${bus.nombre}</strong><br>
+                    Pasajeros: ${bus.pasajeros}/55<br>
+                    Ocupación: ${ocupacion.toFixed(0)}%<br>
+                    <small>Velocidad actual: ${calcularVelocidadAjustada(bus).toFixed(2)}x</small>
+                `);
+
+                bus.circleMarker = circleMarker;
+            });
+        }
+
+        // ============================================
+        // DIBUJAR EVENTO EN EL MAPA
+        // ============================================
+        function dibujarEventos() {
+            eventos.forEach(evento => {
+                if (!evento.activo) return;
+
+                const parada = paradas.find(p => p.id === evento.parada);
+                const emojis = {
+                    'accidente': '🚗💥',
+                    'lluvia': '🌧️',
+                    'protesta': '🚧',
+                    'construccion': '🏗️'
+                };
+
+                L.marker([parada.lat, parada.lon], {
+                    icon: L.divIcon({
+                        className: 'evento-icon',
+                        html: `<div style="font-size: 30px; text-align: center;">${emojis[evento.tipo] || '⚠️'}</div>`,
+                        iconSize: [35, 35]
+                    })
+                }).addTo(layerBuses);
+            });
+        }
+
+        // ============================================
+        // CREAR EVENTO
+        // ============================================
+        function crearEvento(tipo) {
+            if (!paradaSeleccionada) {
+                alert('❌ Selecciona una parada primero (haz click en el mapa)');
+                return;
+            }
+
+            // Verificar si ya existe evento
+            const eventoExistente = eventos.find(e => e.parada === paradaSeleccionada.id && e.tipo === tipo);
+            
+            if (eventoExistente) {
+                eventoExistente.activo = true;
+                eventoExistente.severidad = 0.7;
+            } else {
+                eventos.push({
+                    tipo: tipo,
+                    parada: paradaSeleccionada.id,
+                    severidad: 0.7,
+                    activo: true
+                });
+            }
+
+            mostrarMensaje(`⚠️ Evento "${tipo}" creado en ${paradaSeleccionada.nombre}`);
+            actualizarEstadisticas();
+            
+            // Botones activados
+            const botones = document.querySelectorAll('.btn-evento');
+            botones.forEach(btn => {
+                if (btn.classList.contains(tipo)) {
+                    btn.classList.add('activo');
+                }
+            });
+        }
+
+        // ============================================
+        // LIMPIAR EVENTOS
+        // ============================================
+        function limpiarEventos() {
+            eventos = [];
+            paradaSeleccionada = null;
+            
+            const botones = document.querySelectorAll('.btn-evento');
+            botones.forEach(btn => btn.classList.remove('activo'));
+            
+            mostrarMensaje('✅ Todos los eventos han sido limpiados');
+            actualizarEstadisticas();
+        }
+
+        // ============================================
+        // TOGGLE SIMULACIÓN
+        // ============================================
+        function toggleSimulacion() {
+            simulacionActiva = !simulacionActiva;
+            const btn = event.target;
+            
+            if (simulacionActiva) {
+                btn.textContent = '⏸️ Pausar Simulación';
+                btn.style.background = '#e67e22';
+                crearBuses();
+                loop();
+            } else {
+                btn.textContent = '▶️ Iniciar Simulación';
+                btn.style.background = '#667eea';
+            }
+        }
+
+        // ============================================
+        // LOOP PRINCIPAL
+        // ============================================
+        function loop() {
+            if (!simulacionActiva) return;
+
+            actualizarBuses();
+            dibujarBuses();
+            dibujarEventos();
+            actualizarEstadisticas();
+            actualizarRutasList();
+
+            tiempoTranscurrido++;
+            document.getElementById('tiempoTranscurrido').textContent = tiempoTranscurrido + 's';
+
+            requestAnimationFrame(loop);
+        }
+
+        // ============================================
+        // ACTUALIZAR ESTADÍSTICAS
+        // ============================================
+        function actualizarEstadisticas() {
+            document.getElementById('totalBuses').textContent = buses.length;
+            
+            const totalPasajeros = buses.reduce((sum, bus) => sum + bus.pasajeros, 0);
+            document.getElementById('totalPasajeros').textContent = totalPasajeros;
+            
+            const capacidadTotal = buses.length * 55;
+            const congestion = Math.round((totalPasajeros / capacidadTotal) * 100);
+            document.getElementById('congestion').textContent = congestion + '%';
+            
+            const eventosActivos = eventos.filter(e => e.activo).length;
+            document.getElementById('totalEventos').textContent = eventosActivos;
+        }
+
+        // ============================================
+        // ACTUALIZAR LISTA DE RUTAS
+        // ============================================
+        function actualizarRutasList() {
+            const list = document.getElementById('rutasList');
+            list.innerHTML = '';
+
+            buses.forEach(bus => {
+                const rutaNombres = bus.ruta.map(p => p.nombre).join(' → ');
+                const ocupacion = Math.round((bus.pasajeros / 55) * 100);
+                
+                let color = '#6bcf7f';
+                if (ocupacion < 30) color = '#6bcf7f';
+                else if (ocupacion < 50) color = '#ffd93d';
+                else color = '#ff6b6b';
+
+                const item = document.createElement('div');
+                item.className = 'ruta-item';
+                item.innerHTML = `
+                    <div class="ruta-nombre">${bus.nombre}</div>
+                    <div class="ruta-info">
+                        <span style="color: ${color};">● ${ocupacion}% ocupado</span><br>
+                        <small>${rutaNombres}</small>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // ============================================
+        // MOSTRAR MENSAJE
+        // ============================================
+        function mostrarMensaje(mensaje) {
+            const eventoInfo = document.getElementById('eventoInfo');
+            eventoInfo.textContent = mensaje;
+            eventoInfo.classList.add('show');
+            
+            setTimeout(() => {
+                eventoInfo.classList.remove('show');
+            }, 3000);
+        }
+
+        // ============================================
+        // MOSTRAR ÁLGEBRA LINEAL
+        // ============================================
+        function mostrarAlgebraLineal() {
+            if (buses.length === 0) {
+                alert('Inicia la simulación primero');
+                return;
+            }
+
+            let info = '📊 ÁLGEBRA LINEAL APLICADA:\n\n';
+            info += '1. DISTANCIAS EUCLIDIANAS:\n';
+            
+            for (let i = 0; i < paradas.length && i < 3; i++) {
+                for (let j = i + 1; j < paradas.length && j < 4; j++) {
+                    const dist = distanciaEuclidiana(paradas[i], paradas[j]);
+                    info += `   ${paradas[i].nombre} → ${paradas[j].nombre}: ${dist.toFixed(2)} km\n`;
+                }
+            }
+
+            info += '\n2. INTERPOLACIÓN LINEAL:\n';
+            buses.forEach(bus => {
+                const pos = obtenerPosicionBus(bus);
+                info += `   ${bus.nombre}: lat=${pos.lat.toFixed(4)}, lon=${pos.lon.toFixed(4)}\n`;
+            });
+
+            info += '\n3. OPTIMIZACIÓN CON EVENTOS:\n';
+            if (eventos.length > 0) {
+                eventos.filter(e => e.activo).forEach(evt => {
+                    info += `   ${evt.tipo}: severidad ${(evt.severidad * 100).toFixed(0)}%\n`;
+                });
+            } else {
+                info += '   Sin eventos activos\n';
+            }
+
+            alert(info);
+        }
+
+        // ============================================
+        // INICIALIZACIÓN
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Inicializando AMCO...');
+            inicializarMapa();
+            actualizarEstadisticas();
+            console.log('✅ Sistema listo');
+        });
+    </script>
+</body>
+</html>

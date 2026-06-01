@@ -76,8 +76,10 @@ st.title('🎛️ Centro Inteligente Metropolitano AMCO')
 st.sidebar.markdown('## ⚙️ Centro Operacional')
 auto_refresh = st.sidebar.checkbox('📡 Tiempo Real', value=True)
 
+if st.sidebar.button('🔄 Actualizar datos'):
+    st.experimental_rerun()
 
-@st.fragment(run_every='2s' if auto_refresh else None)
+
 def render_dashboard():
 
     try:

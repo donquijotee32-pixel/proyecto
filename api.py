@@ -49,11 +49,21 @@ class ConnectionManager:
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
 
-    async def broadcast(self, message: str):
-        for connection in self.active_connections:
-            await connection.send_text(message)
+    async def broadcast(self, message: str, sender: WebSocket | None = None):
+        dead_connections = []
+        for connection in list(self.active_connections):
+            if sender is not None and connection is sender:
+                continue
+            try:
+                await connection.send_text(message)
+            except Exception:
+                dead_connections.append(connection)
+
+        for connection in dead_connections:
+            self.disconnect(connection)
 
 ws_manager = ConnectionManager()
 
@@ -113,7 +123,7 @@ async def websocket_telemetria(websocket: WebSocket):
             v_id = await run_in_threadpool(sync_db_ops)
             
             if v_id:
-                await ws_manager.broadcast(json.dumps({"status": "updated", "vehiculo_id": v_id}))
+                await ws_manager.broadcast(json.dumps({"status": "updated", "vehiculo_id": v_id}), sender=websocket)
             
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)

@@ -55,6 +55,22 @@ def calcular_tiempo_estimado(distancia_km, velocidad_promedio_kmh=30):
     return round(minutos, 1)
 
 
+def calcular_demanda_promedio(personas_list: List[int]) -> float:
+    """Calcula demanda promedio de personas esperando en paradas"""
+    if not personas_list:
+        return 0.0
+    
+    return round(sum(personas_list) / len(personas_list), 2)
+
+
+def path_json_a_lista(path_json: str) -> List[list]:
+    """Convierte path JSON string a lista de coordenadas"""
+    try:
+        return json.loads(path_json)
+    except:
+        return []
+
+
 # ==================== UTILIDADES GENERALES ====================
 
 class UtilsGenerales:
